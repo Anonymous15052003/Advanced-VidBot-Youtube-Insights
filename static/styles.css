@@ -1,0 +1,18 @@
+body {
+    font-family: 'Arial', sans-serif;
+}
+
+.navbar {
+    margin-bottom: 2rem;
+}
+
+.card {
+    max-width: 600px;
+    margin: auto;
+    border-radius: 15px;
+    background: #f8f9fa;
+}
+
+.alert {
+    font-size: 1rem;
+}

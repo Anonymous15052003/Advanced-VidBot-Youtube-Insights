@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow p-4">
+    <h1 class="mb-4">YouTube Summarizer</h1>
+    <form id="summaryForm">
+        <div class="mb-3">
+            <label for="youtube_url" class="form-label">YouTube URL:</label>
+            <input type="text" id="youtube_url" name="youtube_url" class="form-control" placeholder="Enter YouTube URL" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Summarize</button>
+    </form>
+    <div id="summary" class="mt-4 alert alert-info" style="display: none;"></div>
+</div>
+{% endblock %}

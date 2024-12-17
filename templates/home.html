@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summarizer</title>
+</head>
+<body>
+    <h1>YouTube Video Summarizer</h1>
+    <form action="/summarize" method="POST">
+        <label for="youtube_url">YouTube URL:</label>
+        <input type="text" id="youtube_url" name="youtube_url" required>
+        <button type="submit">Get Summary</button>
+    </form>
+
+    <h1>Ask Questions</h1>
+    <form action="/ask" method="POST">
+        <label for="youtube_url">YouTube URL:</label>
+        <input type="text" id="youtube_url" name="youtube_url" required>
+        <br>
+        <label for="question">Your Question:</label>
+        <input type="text" id="question" name="question" required>
+        <button type="submit">Ask</button>
+    </form>
+</body>
+</html>
