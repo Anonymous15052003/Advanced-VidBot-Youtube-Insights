@@ -9,7 +9,7 @@ body {
 
 .welcome-section {
     height: 100vh;
-    background-image: url('https://source.unsplash.com/random');
+    background-image: url('img1.jpg');
     background-size: cover;
     background-position: center;
     display: flex;
@@ -40,4 +40,3 @@ body {
     font-size: 1.5rem;
     padding: 1rem 0;
 }
-
