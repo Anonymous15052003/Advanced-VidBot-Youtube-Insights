@@ -10,6 +10,46 @@
         </div>
         <button type="submit" class="btn btn-primary">Generate Summary</button>
     </form>
-    <div id="summary-result" class="mt-4"></div>
+    <div id="summary-result" class="mt-4" style="display: none;">
+        <h3>Summary:</h3>
+        <p id="summary-content" class="lead"></p>
+    </div>
+    <div id="error-message" class="mt-4 text-danger" style="display: none;"></div>
 </div>
+
+<script>
+document.getElementById("youtube-summary-form").addEventListener("submit", async function (e) {
+    e.preventDefault();  // Prevent form submission reload
+
+    const urlInput = document.getElementById("youtube-url").value;
+    const summaryResult = document.getElementById("summary-result");
+    const summaryContent = document.getElementById("summary-content");
+    const errorMessage = document.getElementById("error-message");
+
+    summaryResult.style.display = "none";
+    errorMessage.style.display = "none";
+
+    try {
+        const response = await fetch("/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `youtube_url=${encodeURIComponent(urlInput)}`
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            summaryContent.textContent = result.summary;
+            summaryResult.style.display = "block";
+        } else {
+            errorMessage.textContent = result.error || "An unexpected error occurred.";
+            errorMessage.style.display = "block";
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        errorMessage.textContent = "An error occurred. Please try again.";
+        errorMessage.style.display = "block";
+    }
+});
+</script>
 {% endblock %}
