@@ -76,41 +76,41 @@ def youtube_summary():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# @app.route("/ask", methods=["POST"])
-# def ask_question():
-#     """Handles question-answering based on the transcript."""
-#     youtube_url = request.form.get("youtube_url")
-#     question = request.form.get("question")
+@app.route("/ask", methods=["POST"])
+def ask_question():
+    """Handles question-answering based on the transcript."""
+    youtube_url = request.form.get("youtube_url")
+    question = request.form.get("question")
 
-#     if not youtube_url or not question:
-#         return jsonify({"error": "YouTube URL and Question are required"}), 400
+    if not youtube_url or not question:
+        return jsonify({"error": "YouTube URL and Question are required"}), 400
 
-#     try:
-#         # Step 1: Get transcript and split into chunks
-#         transcript, _ = get_transcript(youtube_url)
-#         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-#         chunks = text_splitter.split_text(transcript)
+    try:
+        # Step 1: Get transcript and split into chunks
+        transcript, _ = get_transcript(youtube_url)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_text(transcript)
 
-#         # Step 2: Load or create vector store
-#         store_name = "vector_store"
-#         if os.path.exists(f"{store_name}.pkl"):
-#             with open(f"{store_name}.pkl", "rb") as f:
-#                 vector_store = pickle.load(f)
-#         else:
-#             embeddings = OpenAIEmbeddings()
-#             vector_store = FAISS.from_texts(chunks, embedding=embeddings)
-#             with open(f"{store_name}.pkl", "wb") as f:
-#                 pickle.dump(vector_store, f)
+        # Step 2: Load or create vector store
+        store_name = "vector_store"
+        if os.path.exists(f"{store_name}.pkl"):
+            with open(f"{store_name}.pkl", "rb") as f:
+                vector_store = pickle.load(f)
+        else:
+            embeddings = OpenAIEmbeddings()
+            vector_store = FAISS.from_texts(chunks, embedding=embeddings)
+            with open(f"{store_name}.pkl", "wb") as f:
+                pickle.dump(vector_store, f)
 
-#         # Step 3: Perform similarity search and generate response
-#         docs = vector_store.similarity_search(question, k=3)
-#         llm = OpenAI(model_name="gpt-3.5-turbo")
-#         chain = load_qa_chain(llm=llm, chain_type="stuff")
-#         response = chain.run(input_documents=docs, question=question)
+        # Step 3: Perform similarity search and generate response
+        docs = vector_store.similarity_search(question, k=3)
+        llm = OpenAI(model_name="gpt-3.5-turbo")
+        chain = load_qa_chain(llm=llm, chain_type="stuff")
+        response = chain.run(input_documents=docs, question=question)
 
-#         return jsonify({"answer": response})
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
+        return jsonify({"answer": response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 

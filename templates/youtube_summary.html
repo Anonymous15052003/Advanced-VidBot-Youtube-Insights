@@ -10,20 +10,45 @@
         </div>
         <button type="submit" class="btn btn-primary">Generate Summary</button>
     </form>
+
+    <!-- Summary Result -->
     <div id="summary-result" class="mt-4" style="display: none;">
         <h3>Summary:</h3>
         <p id="summary-content" class="lead"></p>
+
+        <!-- Show Button for Queries -->
+        <button id="ask-question-btn" class="btn btn-secondary mt-3">Ask a Question</button>
     </div>
+
+    <!-- Query Section (Initially Hidden) -->
+    <div id="question-section" class="mt-4" style="display: none;">
+        <h4>Ask a Question About the Video</h4>
+        <form id="question-form">
+            <div class="mb-3">
+                <label for="user-question" class="form-label">Enter your question:</label>
+                <input type="text" id="user-question" class="form-control" placeholder="Type your question here" required>
+            </div>
+            <button type="submit" class="btn btn-success">Get Answer</button>
+        </form>
+
+        <!-- Query Result -->
+        <div id="question-result" class="mt-4" style="display: none;">
+            <h5>Answer:</h5>
+            <p id="answer-content" class="lead"></p>
+        </div>
+    </div>
+
     <div id="error-message" class="mt-4 text-danger" style="display: none;"></div>
 </div>
 
 <script>
 document.getElementById("youtube-summary-form").addEventListener("submit", async function (e) {
-    e.preventDefault();  // Prevent form submission reload
+    e.preventDefault();
 
     const urlInput = document.getElementById("youtube-url").value;
     const summaryResult = document.getElementById("summary-result");
     const summaryContent = document.getElementById("summary-content");
+    const askQuestionBtn = document.getElementById("ask-question-btn");
     const errorMessage = document.getElementById("error-message");
 
     summaryResult.style.display = "none";
@@ -41,6 +66,46 @@ document.getElementById("youtube-summary-form").addEventListener("submit", async
         if (response.ok) {
             summaryContent.textContent = result.summary;
             summaryResult.style.display = "block";
+            askQuestionBtn.dataset.youtubeUrl = urlInput; // Store URL for the question submission
+        } else {
+            errorMessage.textContent = result.error || "An unexpected error occurred.";
+            errorMessage.style.display = "block";
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        errorMessage.textContent = "An error occurred. Please try again.";
+        errorMessage.style.display = "block";
+    }
+});
+
+document.getElementById("ask-question-btn").addEventListener("click", function () {
+    document.getElementById("question-section").style.display = "block";
+});
+
+document.getElementById("question-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const youtubeUrl = document.getElementById("ask-question-btn").dataset.youtubeUrl;
+    const userQuestion = document.getElementById("user-question").value;
+    const answerContent = document.getElementById("answer-content");
+    const questionResult = document.getElementById("question-result");
+    const errorMessage = document.getElementById("error-message");
+
+    questionResult.style.display = "none";
+    errorMessage.style.display = "none";
+
+    try {
+        const response = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `youtube_url=${encodeURIComponent(youtubeUrl)}&question=${encodeURIComponent(userQuestion)}`
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            answerContent.textContent = result.answer;
+            questionResult.style.display = "block";
         } else {
             errorMessage.textContent = result.error || "An unexpected error occurred.";
             errorMessage.style.display = "block";
