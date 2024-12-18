@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template
 import os
 import openai
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -12,6 +12,7 @@ from langchain.chains.question_answering import load_qa_chain
 
 app = Flask(__name__)
 
+# Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 print(f"Loaded API Key: {openai.api_key[:5]}********")
@@ -37,15 +38,14 @@ def get_transcript(youtube_url):
     except Exception as e:
         raise Exception(f"Error fetching transcript: {e}")
 
-
 def summarize_with_openai(transcript, language_code, model_name="gpt-3.5-turbo"):
     """Summarizes the transcript using OpenAI."""
     try:
         messages = [
             {"role": "system", "content": "You are a helpful summarizer."},
-            {"role": "user", "content": f"Summarize the following text in {language_code}.\n\n{transcript}"}
+            {"role": "user", "content": f"Summarize the following text in {language_code} language:\n\n{transcript}"}
         ]
-        
+
         response = openai.ChatCompletion.create(
             model=model_name,
             messages=messages,
@@ -63,8 +63,8 @@ def home():
 def youtube_summary():
     return render_template("youtube_summary.html")
 
-def youtube_summary():
-    """Handles the summarization of a YouTube video transcript."""
+@app.route("/summarize", methods=["POST"])
+def summarize():
     youtube_url = request.form.get("youtube_url")
     if not youtube_url:
         return jsonify({"error": "YouTube URL is required"}), 400
@@ -72,9 +72,16 @@ def youtube_summary():
     try:
         transcript, language_code = get_transcript(youtube_url)
         summary = summarize_with_openai(transcript, language_code)
+
+        # Save transcript for later use
+        with open("current_transcript.pkl", "wb") as f:
+            pickle.dump(transcript, f)
+
         return jsonify({"summary": summary})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+from langchain.chat_models import ChatOpenAI
 
 @app.route("/ask", methods=["POST"])
 def ask_question():
@@ -97,22 +104,20 @@ def ask_question():
             with open(f"{store_name}.pkl", "rb") as f:
                 vector_store = pickle.load(f)
         else:
-            embeddings = OpenAIEmbeddings()
+            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
             vector_store = FAISS.from_texts(chunks, embedding=embeddings)
             with open(f"{store_name}.pkl", "wb") as f:
                 pickle.dump(vector_store, f)
 
         # Step 3: Perform similarity search and generate response
         docs = vector_store.similarity_search(question, k=3)
-        llm = OpenAI(model_name="gpt-3.5-turbo")
+        llm = ChatOpenAI(model="gpt-3.5-turbo")  # Use ChatOpenAI for chat models
         chain = load_qa_chain(llm=llm, chain_type="stuff")
         response = chain.run(input_documents=docs, question=question)
 
         return jsonify({"answer": response})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
 
 @app.route("/upload_videos")
 def upload_videos():
@@ -121,21 +126,6 @@ def upload_videos():
 @app.route("/live_webcam")
 def live_webcam():
     return render_template("live_webcam.html")
-
-@app.route("/summarize", methods=["POST"])
-def summarize():
-    youtube_url = request.form.get("youtube_url")
-    if not youtube_url:
-        return jsonify({"error": "YouTube URL is required"}), 400
-
-    try:
-        transcript, language_code = get_transcript(youtube_url)
-        summary = summarize_with_openai(transcript, language_code)
-        return jsonify({"summary": summary})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Other function definitions like get_transcript, summarize_with_openai, etc.
 
 if __name__ == "__main__":
     app.run(debug=True)
