@@ -84,6 +84,8 @@ def summarize():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+import pickle
+from googletrans import Translator
 
 @app.route("/ask", methods=["POST"])
 def ask_question():
@@ -101,8 +103,28 @@ def ask_question():
         if not os.path.exists(transcript_file):
             return jsonify({"error": "Transcript for this video is not available. Summarize the video first."}), 400
 
-        with open(transcript_file, "rb") as f:
+        with open(transcript_file, "rb") as f:  # Replace 'transcript_file.pkl' with the actual file name
             transcript = pickle.load(f)
+
+        # Step 2: Convert transcript to a string (if it's not already)
+        transcript_text = str(transcript)
+
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",  # You can also use 'gpt-3.5-turbo'
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that translates text into English."},
+                    {"role": "user", "content": f"Translate the following text to English: {transcript_text}"}
+                ]
+            )
+            translated = response['choices'][0]['message']['content']
+        except Exception as e:
+            print(f"Error during translation: {e}")
+            translated = transcript_text  # Fallback to the original transcript
+
+        # Step 5: Write the translated transcript to abc.txt
+        with open('abc.txt', 'w', encoding='utf-8') as f:
+            f.write(translated)
         
         # Step 2: Split the transcript into chunks
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
