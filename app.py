@@ -9,6 +9,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
+from langchain.chat_models import ChatOpenAI
 
 app = Flask(__name__)
 
@@ -70,18 +71,19 @@ def summarize():
         return jsonify({"error": "YouTube URL is required"}), 400
 
     try:
+        # Get the video transcript and summarize it
         transcript, language_code = get_transcript(youtube_url)
         summary = summarize_with_openai(transcript, language_code)
 
-        # Save transcript for later use
-        with open("current_transcript.pkl", "wb") as f:
+        # Save the transcript for later use, uniquely identified by video ID
+        video_id = youtube_url.split("v=")[-1]
+        with open(f"{video_id}_transcript.pkl", "wb") as f:
             pickle.dump(transcript, f)
 
         return jsonify({"summary": summary})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-from langchain.chat_models import ChatOpenAI
 
 @app.route("/ask", methods=["POST"])
 def ask_question():
@@ -93,23 +95,31 @@ def ask_question():
         return jsonify({"error": "YouTube URL and Question are required"}), 400
 
     try:
-        # Step 1: Get transcript and split into chunks
-        transcript, _ = get_transcript(youtube_url)
+        # Step 1: Load the transcript specific to the video
+        video_id = youtube_url.split("v=")[-1]
+        transcript_file = f"{video_id}_transcript.pkl"
+        if not os.path.exists(transcript_file):
+            return jsonify({"error": "Transcript for this video is not available. Summarize the video first."}), 400
+
+        with open(transcript_file, "rb") as f:
+            transcript = pickle.load(f)
+        
+        # Step 2: Split the transcript into chunks
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_text(transcript)
 
-        # Step 2: Load or create vector store
-        store_name = "vector_store"
-        if os.path.exists(f"{store_name}.pkl"):
-            with open(f"{store_name}.pkl", "rb") as f:
+        # Step 3: Use a video-specific vector store
+        vector_store_file = f"{video_id}_vector_store.pkl"
+        if os.path.exists(vector_store_file):
+            with open(vector_store_file, "rb") as f:
                 vector_store = pickle.load(f)
         else:
-            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            embeddings = OpenAIEmbeddings()  # Replace with HuggingFaceEmbeddings if needed
             vector_store = FAISS.from_texts(chunks, embedding=embeddings)
-            with open(f"{store_name}.pkl", "wb") as f:
+            with open(vector_store_file, "wb") as f:
                 pickle.dump(vector_store, f)
 
-        # Step 3: Perform similarity search and generate response
+        # Step 4: Perform similarity search and generate response
         docs = vector_store.similarity_search(question, k=3)
         llm = ChatOpenAI(model="gpt-3.5-turbo")  # Use ChatOpenAI for chat models
         chain = load_qa_chain(llm=llm, chain_type="stuff")
@@ -118,6 +128,8 @@ def ask_question():
         return jsonify({"answer": response})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 @app.route("/upload_videos")
 def upload_videos():
