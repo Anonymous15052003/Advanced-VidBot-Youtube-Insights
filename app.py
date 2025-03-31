@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 import os
 import openai
+import pickle
 from youtube_transcript_api import YouTubeTranscriptApi
 from dotenv import load_dotenv
-import pickle
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
@@ -11,12 +11,15 @@ from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 
+
 app = Flask(__name__)
+
 
 # Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-print(f"Loaded API Key: {openai.api_key[:5]}********")
+
+
 
 def get_transcript(youtube_url):
     """Fetches the transcript of a YouTube video."""
@@ -38,6 +41,7 @@ def get_transcript(youtube_url):
         return full_transcript, transcript.language_code
     except Exception as e:
         raise Exception(f"Error fetching transcript: {e}")
+
 
 def summarize_with_openai(transcript, language_code, model_name="gpt-3.5-turbo"):
     """Summarizes the transcript using OpenAI."""
