@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 
 from flask import Flask, request, jsonify, render_template
 import os
@@ -220,9 +220,17 @@ def process_video():
         # Step 2: Summarize translated English content using same summarize_with_openai() logic
         summary = summarize_with_openai(translated_text, language_code="English")
 
-        # Save transcript for Q&A
-        with open("uploaded_video_transcript.pkl", "wb") as f:
+        # Construct dynamic pickle filename
+        video_filename = file.filename  # original uploaded filename
+        base_filename = os.path.splitext(video_filename)[0]  # without extension
+        pickle_filename = f"{base_filename}_transcript.pkl"
+
+        # Save transcript
+        with open(pickle_filename, "wb") as f:
             pickle.dump(translated_text, f)
+
+        # Save pickle filename in session
+        session['upload_pickle_filename'] = pickle_filename
 
         # Clean up
         os.remove(video_path)
@@ -244,11 +252,11 @@ def ask_question_upload():
         return jsonify({"error": "Question is required"}), 400
 
     try:
-        transcript_file = "uploaded_video_transcript.pkl"
-        if not os.path.exists(transcript_file):
+        pickle_filename = session.get('upload_pickle_filename')
+        if not pickle_filename or not os.path.exists(pickle_filename):
             return jsonify({"error": "Transcript not available. Please summarize first."}), 400
 
-        with open(transcript_file, "rb") as f:
+        with open(pickle_filename, "rb") as f:
             transcript = pickle.load(f)
 
         # Step 2: Chunk text
@@ -256,7 +264,7 @@ def ask_question_upload():
         chunks = text_splitter.split_text(transcript)
 
         # Step 3: Load or create vector store
-        vector_store_file = "uploaded_video_vector_store.pkl"
+        vector_store_file = f"{os.path.splitext(pickle_filename)[0]}_vector_store.pkl"
         if os.path.exists(vector_store_file):
             with open(vector_store_file, "rb") as f:
                 vector_store = pickle.load(f)
@@ -276,5 +284,7 @@ def ask_question_upload():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == '__main__':
+    app.secret_key = 'super_secret_key'  # Required for session to work
     app.run(debug=True)
