@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="welcome-section">
+    <div class="welcome-text text-center">
+        <h1>Welcome to YouTube AI Assistant</h1>
+        <p class="lead">Your AI-powered platform for video summarization, uploads, and live webcam insights.</p>
+
+        <div class="mt-4">
+            <a href="{{ url_for('youtube_summary') }}" class="btn btn-primary btn-lg m-2">YouTube Summary</a>
+            <a href="{{ url_for('upload_videos') }}" class="btn btn-success btn-lg m-2">Upload Video</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+    

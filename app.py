@@ -1,3 +1,5 @@
+from flask import Flask, render_template, request, jsonify
+
 from flask import Flask, request, jsonify, render_template
 import os
 import openai
@@ -11,13 +13,35 @@ from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 
+from flask import Blueprint, render_template, request, jsonify, Response
+import openai
+import os
+import tempfile
+import json
+from moviepy import *
+
 
 app = Flask(__name__)
-
 
 # Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+@app.route('/')
+def landing():
+    return render_template('landing.html', title='Welcome')
+
+@app.route('/youtube_summary')
+def youtube_summary():
+    return render_template('youtube_summary.html', title='YouTube Summary')
+
+@app.route('/upload_videos')
+def upload_videos():
+    return render_template('upload_videos.html', title='Upload Videos')
+
+@app.route('/live_webcam')
+def live_webcam():
+    return render_template('live_webcam.html', title='Live Webcam')
 
 
 
@@ -60,13 +84,7 @@ def summarize_with_openai(transcript, language_code, model_name="gpt-3.5-turbo")
     except Exception as e:
         raise Exception(f"Error during summarization: {e}")
 
-@app.route("/")
-def home():
-    return render_template("home.html")
 
-@app.route("/youtube_summary")
-def youtube_summary():
-    return render_template("youtube_summary.html")
 
 @app.route("/summarize", methods=["POST"])
 def summarize():
@@ -156,14 +174,107 @@ def ask_question():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/process_video', methods=['POST'])
+def process_video():
+    if 'video' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
 
-@app.route("/upload_videos")
-def upload_videos():
-    return render_template("upload_videos.html")
+    file = request.files['video']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
 
-@app.route("/live_webcam")
-def live_webcam():
-    return render_template("live_webcam.html")
+    try:
+        # Save uploaded video temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video_file:
+            file.save(temp_video_file.name)
+            video_path = temp_video_file.name
 
-if __name__ == "__main__":
+        # Extract audio from video
+        audio_path = video_path.replace('.mp4', '.mp3')
+        video_clip = VideoFileClip(video_path)
+        video_clip.audio.write_audiofile(audio_path)
+        video_clip.close()
+
+        # Transcribe using Whisper
+        with open(audio_path, "rb") as audio_file:
+            transcript = openai.Audio.transcribe(
+                model="whisper-1",
+                file=audio_file
+            )
+
+        raw_text = transcript["text"]
+
+        # Step 1: Translate and clean content into meaningful English using GPT
+        translation_prompt = f"""You are a helpful assistant. Translate the following transcript into fluent English:\n\n{raw_text}"""
+        translation_response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that translates transcripts."},
+                {"role": "user", "content": translation_prompt}
+            ],
+            temperature=0.7
+        )
+
+        translated_text = translation_response['choices'][0]['message']['content'].strip()
+
+        # Step 2: Summarize translated English content using same summarize_with_openai() logic
+        summary = summarize_with_openai(translated_text, language_code="English")
+
+        # Save transcript for Q&A
+        with open("uploaded_video_transcript.pkl", "wb") as f:
+            pickle.dump(translated_text, f)
+
+        # Clean up
+        os.remove(video_path)
+        os.remove(audio_path)
+
+        # Final response with clean summary
+        response_json = json.dumps({'summary': summary}, ensure_ascii=False)
+        return Response(response_json, content_type='application/json; charset=utf-8')
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route("/ask_upload", methods=["POST"])
+def ask_question_upload():
+    question = request.form.get("question")
+
+    if not question:
+        return jsonify({"error": "Question is required"}), 400
+
+    try:
+        transcript_file = "uploaded_video_transcript.pkl"
+        if not os.path.exists(transcript_file):
+            return jsonify({"error": "Transcript not available. Please summarize first."}), 400
+
+        with open(transcript_file, "rb") as f:
+            transcript = pickle.load(f)
+
+        # Step 2: Chunk text
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_text(transcript)
+
+        # Step 3: Load or create vector store
+        vector_store_file = "uploaded_video_vector_store.pkl"
+        if os.path.exists(vector_store_file):
+            with open(vector_store_file, "rb") as f:
+                vector_store = pickle.load(f)
+        else:
+            embeddings = OpenAIEmbeddings()
+            vector_store = FAISS.from_texts(chunks, embedding=embeddings)
+            with open(vector_store_file, "wb") as f:
+                pickle.dump(vector_store, f)
+
+        # Step 4: Q&A
+        docs = vector_store.similarity_search(question, k=3)
+        llm = ChatOpenAI(model="gpt-3.5-turbo")
+        chain = load_qa_chain(llm=llm, chain_type="stuff")
+        answer = chain.run(input_documents=docs, question=question)
+
+        return jsonify({"answer": answer})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
     app.run(debug=True)

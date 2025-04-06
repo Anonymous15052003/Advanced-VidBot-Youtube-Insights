@@ -3,8 +3,10 @@
 {% block content %}
 <div class="card p-5">
     <h1 class="card-header">YouTube Summary</h1>
+
+    <!-- YouTube URL Input -->
     <form id="youtube-summary-form">
-        <div class="mb-3">
+        <div class="mb-3 mt-4">
             <label for="youtube-url" class="form-label">Enter YouTube URL:</label>
             <input type="url" name="youtube_url" id="youtube-url" class="form-control" placeholder="https://www.youtube.com/watch?v=example" required>
         </div>
@@ -15,32 +17,32 @@
     <div id="summary-result" class="mt-4" style="display: none;">
         <h3>Summary:</h3>
         <p id="summary-content" class="lead"></p>
-
-        <!-- Show Button for Queries -->
         <button id="ask-question-btn" class="btn btn-secondary mt-3">Ask a Question</button>
     </div>
 
-    <!-- Query Section (Initially Hidden) -->
+    <!-- Question Section -->
     <div id="question-section" class="mt-4" style="display: none;">
         <h4>Ask a Question About the Video</h4>
         <form id="question-form">
             <div class="mb-3">
-                <label for="user-question" class="form-label">Enter your question:</label>
-                <input type="text" id="user-question" class="form-control" placeholder="Type your question here" required>
+                <label for="user-question" class="form-label">Your Question:</label>
+                <input type="text" id="user-question" class="form-control" placeholder="Type your question here..." required>
             </div>
             <button type="submit" class="btn btn-success">Get Answer</button>
         </form>
 
-        <!-- Query Result -->
+        <!-- Answer Result -->
         <div id="question-result" class="mt-4" style="display: none;">
             <h5>Answer:</h5>
             <p id="answer-content" class="lead"></p>
         </div>
     </div>
 
+    <!-- Error Display -->
     <div id="error-message" class="mt-4 text-danger" style="display: none;"></div>
 </div>
 
+<!-- JavaScript to handle API logic -->
 <script>
 document.getElementById("youtube-summary-form").addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -66,7 +68,7 @@ document.getElementById("youtube-summary-form").addEventListener("submit", async
         if (response.ok) {
             summaryContent.textContent = result.summary;
             summaryResult.style.display = "block";
-            askQuestionBtn.dataset.youtubeUrl = urlInput; // Store URL for the question submission
+            askQuestionBtn.dataset.youtubeUrl = urlInput;
         } else {
             errorMessage.textContent = result.error || "An unexpected error occurred.";
             errorMessage.style.display = "block";

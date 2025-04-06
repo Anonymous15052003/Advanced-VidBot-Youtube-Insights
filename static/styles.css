@@ -8,19 +8,20 @@ body {
 }
 
 .welcome-section {
-    height: 100vh; /* This keeps the height as full viewport height */
-    background-image: url('/static/img1.jpg');
-    background-size: cover; /* This will ensure the image covers the entire section */
+    height: 100vh;
+    background-image: url('/static/img1.jpg'); /* Replace if needed */
+    background-size: cover;
     background-position: center;
     display: flex;
     justify-content: center;
     align-items: center;
     color: white;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    flex-direction: column;
 }
 
 .welcome-text {
-    font-size: 3rem;
+    font-size: 2.5rem;
     text-align: center;
 }
 

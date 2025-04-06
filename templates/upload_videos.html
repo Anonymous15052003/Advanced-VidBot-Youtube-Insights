@@ -2,7 +2,132 @@
 
 {% block content %}
 <div class="card p-5">
-    <h1 class="card-header">Upload Random Videos</h1>
-    <p>This section is under construction.</p>
+    <h1 class="card-header">Upload Video for Summary</h1>
+
+    <!-- Upload Form -->
+    <form id="videoForm" class="mt-4" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="videoFile" class="form-label">Select .mp4 Video:</label>
+            <input type="file" class="form-control" id="videoFile" name="video" accept=".mp4" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Summarize</button>
+    </form>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="mt-3 text-info" style="display: none;">
+        ⏳ Summarizing your video, please wait...
+    </div>
+
+    <!-- Error Message -->
+    <div class="text-danger mt-3" id="errorMessage" style="display: none;"></div>
+
+    <!-- Summary Display -->
+    <div id="summaryBox" class="mt-4" style="display: none;">
+        <h3>📄 Summary:</h3>
+        <p id="summaryText" class="lead"></p>
+
+        <!-- Ask Question Button -->
+        <button class="btn btn-secondary mt-3" id="showQuestionFormBtn">Ask a Question</button>
+
+        <!-- Ask Question Form (Initially hidden) -->
+        <form id="questionForm" class="mt-3" style="display: none;">
+            <label for="questionInput" class="form-label">Ask a Question About the Video:</label>
+            <input type="text" class="form-control mb-2" id="questionInput" name="question" placeholder="Type your question here..." required>
+            <button type="submit" class="btn btn-success">Get Answer</button>
+        </form>
+
+        <!-- Answer Display -->
+        <div id="answerBox" class="alert alert-info mt-3" style="display: none;">
+            <h5>💬 Answer:</h5>
+            <p id="answerText" class="mb-0"></p>
+        </div>
+    </div>
 </div>
+
+<script>
+    const form = document.getElementById('videoForm');
+    const loading = document.getElementById('loading');
+    const summaryBox = document.getElementById('summaryBox');
+    const summaryText = document.getElementById('summaryText');
+    const errorMessage = document.getElementById('errorMessage');
+
+    const showQuestionFormBtn = document.getElementById('showQuestionFormBtn');
+    const questionForm = document.getElementById('questionForm');
+    const questionInput = document.getElementById('questionInput');
+    const answerBox = document.getElementById('answerBox');
+    const answerText = document.getElementById('answerText');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorMessage.style.display = 'none';
+        summaryBox.style.display = 'none';
+        loading.style.display = 'block';
+
+        const fileInput = document.getElementById('videoFile');
+        const formData = new FormData();
+        formData.append('video', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/process_video', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            loading.style.display = 'none';
+
+            if (response.ok) {
+                summaryText.textContent = data.summary;
+                summaryBox.style.display = 'block';
+                questionForm.style.display = 'none';
+                answerBox.style.display = 'none';
+                questionInput.value = '';
+            } else {
+                errorMessage.textContent = data.error || "Something went wrong.";
+                errorMessage.style.display = 'block';
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            errorMessage.textContent = "Upload failed. Please try again.";
+            errorMessage.style.display = 'block';
+            console.error(err);
+        }
+    });
+
+    // Show question form when Ask button clicked
+    showQuestionFormBtn.addEventListener('click', () => {
+        questionForm.style.display = 'block';
+        answerBox.style.display = 'none';
+        questionInput.focus();
+    });
+
+    // Handle Ask Question form submission
+    questionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const question = questionInput.value.trim();
+        if (!question) return;
+
+        try {
+            const response = await fetch('/ask_upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'question=' + encodeURIComponent(question)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                answerText.textContent = data.answer;
+                answerBox.style.display = 'block';
+            } else {
+                answerText.textContent = data.error || "Something went wrong.";
+                answerBox.style.display = 'block';
+            }
+        } catch (err) {
+            answerText.textContent = "Failed to get answer. Please try again.";
+            answerBox.style.display = 'block';
+            console.error(err);
+        }
+    });
+</script>
 {% endblock %}
