@@ -14,8 +14,9 @@
     </form>
 
     <!-- Loading Spinner -->
-    <div id="loading" class="mt-3 text-info" style="display: none;">
-        ⏳ Summarizing your video, please wait...
+    <div id="loading" class="text-center mt-4" style="display: none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Summarizing your video, please wait...</p>
     </div>
 
     <!-- Error Message -->
@@ -29,12 +30,18 @@
         <!-- Ask Question Button -->
         <button class="btn btn-secondary mt-3" id="showQuestionFormBtn">Ask a Question</button>
 
-        <!-- Ask Question Form (Initially hidden) -->
+        <!-- Ask Question Form -->
         <form id="questionForm" class="mt-3" style="display: none;">
             <label for="questionInput" class="form-label">Ask a Question About the Video:</label>
             <input type="text" class="form-control mb-2" id="questionInput" name="question" placeholder="Type your question here..." required>
             <button type="submit" class="btn btn-success">Get Answer</button>
         </form>
+
+        <!-- Question Loading -->
+        <div id="questionLoading" class="text-center mt-3" style="display: none;">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="mt-2">Fetching answer...</p>
+        </div>
 
         <!-- Answer Display -->
         <div id="answerBox" class="alert alert-info mt-3" style="display: none;">
@@ -44,6 +51,7 @@
     </div>
 </div>
 
+<!-- JavaScript -->
 <script>
     const form = document.getElementById('videoForm');
     const loading = document.getElementById('loading');
@@ -56,7 +64,9 @@
     const questionInput = document.getElementById('questionInput');
     const answerBox = document.getElementById('answerBox');
     const answerText = document.getElementById('answerText');
+    const questionLoading = document.getElementById('questionLoading');
 
+    // Handle Summary Submission
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         errorMessage.style.display = 'none';
@@ -101,11 +111,14 @@
         questionInput.focus();
     });
 
-    // Handle Ask Question form submission
+    // Handle Question Submission
     questionForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const question = questionInput.value.trim();
         if (!question) return;
+
+        answerBox.style.display = 'none';
+        questionLoading.style.display = 'block';
 
         try {
             const response = await fetch('/ask_upload', {
@@ -115,6 +128,7 @@
             });
 
             const data = await response.json();
+            questionLoading.style.display = 'none';
 
             if (response.ok) {
                 answerText.textContent = data.answer;
@@ -124,6 +138,7 @@
                 answerBox.style.display = 'block';
             }
         } catch (err) {
+            questionLoading.style.display = 'none';
             answerText.textContent = "Failed to get answer. Please try again.";
             answerBox.style.display = 'block';
             console.error(err);

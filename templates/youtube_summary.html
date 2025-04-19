@@ -13,6 +13,12 @@
         <button type="submit" class="btn btn-primary">Generate Summary</button>
     </form>
 
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="text-center mt-4" style="display: none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Processing... Please wait.</p>
+    </div>
+
     <!-- Summary Result -->
     <div id="summary-result" class="mt-4" style="display: none;">
         <h3>Summary:</h3>
@@ -31,6 +37,12 @@
             <button type="submit" class="btn btn-success">Get Answer</button>
         </form>
 
+        <!-- Question Loading -->
+        <div id="question-loading" class="text-center mt-4" style="display: none;">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="mt-2">Fetching answer...</p>
+        </div>
+
         <!-- Answer Result -->
         <div id="question-result" class="mt-4" style="display: none;">
             <h5>Answer:</h5>
@@ -42,7 +54,7 @@
     <div id="error-message" class="mt-4 text-danger" style="display: none;"></div>
 </div>
 
-<!-- JavaScript to handle API logic -->
+<!-- JavaScript to handle API logic with loading indicators -->
 <script>
 document.getElementById("youtube-summary-form").addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -52,9 +64,11 @@ document.getElementById("youtube-summary-form").addEventListener("submit", async
     const summaryContent = document.getElementById("summary-content");
     const askQuestionBtn = document.getElementById("ask-question-btn");
     const errorMessage = document.getElementById("error-message");
+    const loadingSpinner = document.getElementById("loading-spinner");
 
     summaryResult.style.display = "none";
     errorMessage.style.display = "none";
+    loadingSpinner.style.display = "block";
 
     try {
         const response = await fetch("/summarize", {
@@ -64,6 +78,7 @@ document.getElementById("youtube-summary-form").addEventListener("submit", async
         });
 
         const result = await response.json();
+        loadingSpinner.style.display = "none";
 
         if (response.ok) {
             summaryContent.textContent = result.summary;
@@ -74,7 +89,7 @@ document.getElementById("youtube-summary-form").addEventListener("submit", async
             errorMessage.style.display = "block";
         }
     } catch (error) {
-        console.error("Error:", error);
+        loadingSpinner.style.display = "none";
         errorMessage.textContent = "An error occurred. Please try again.";
         errorMessage.style.display = "block";
     }
@@ -92,9 +107,11 @@ document.getElementById("question-form").addEventListener("submit", async functi
     const answerContent = document.getElementById("answer-content");
     const questionResult = document.getElementById("question-result");
     const errorMessage = document.getElementById("error-message");
+    const questionLoading = document.getElementById("question-loading");
 
     questionResult.style.display = "none";
     errorMessage.style.display = "none";
+    questionLoading.style.display = "block";
 
     try {
         const response = await fetch("/ask", {
@@ -104,6 +121,7 @@ document.getElementById("question-form").addEventListener("submit", async functi
         });
 
         const result = await response.json();
+        questionLoading.style.display = "none";
 
         if (response.ok) {
             answerContent.textContent = result.answer;
@@ -113,7 +131,7 @@ document.getElementById("question-form").addEventListener("submit", async functi
             errorMessage.style.display = "block";
         }
     } catch (error) {
-        console.error("Error:", error);
+        questionLoading.style.display = "none";
         errorMessage.textContent = "An error occurred. Please try again.";
         errorMessage.style.display = "block";
     }
