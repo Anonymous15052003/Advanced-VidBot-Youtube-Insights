@@ -36,10 +36,6 @@ def youtube_summary():
 def upload_videos():
     return render_template('upload_videos.html', title='Upload Videos')
 
-@app.route('/live_webcam')
-def live_webcam():
-    return render_template('live_webcam.html', title='Live Webcam')
-
 
 def get_transcript(youtube_url):
     try:
@@ -57,18 +53,41 @@ def get_transcript(youtube_url):
     except Exception as e:
         raise Exception(f"Error fetching transcript: {e}")
 
+
 def summarize_with_openai(transcript, language_code, model_name="gpt-3.5-turbo"):
     try:
-        messages = [
+        # Step 1: Split into manageable chunks
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=300)
+        chunks = text_splitter.split_text(transcript)
+
+        partial_summaries = []
+        for i, chunk in enumerate(chunks):
+            messages = [
+                {"role": "system", "content": "You are a helpful summarizer."},
+                {"role": "user", "content": f"Summarize the following text in {language_code}:\n\n{chunk}"}
+            ]
+            response = openai.ChatCompletion.create(
+                model=model_name,
+                messages=messages,
+                temperature=0.7
+            )
+            summary = response.choices[0].message['content']
+            partial_summaries.append(summary)
+
+        # Step 2: Combine the chunk-level summaries into a final summary
+        combined_summary = " ".join(partial_summaries)
+
+        final_messages = [
             {"role": "system", "content": "You are a helpful summarizer."},
-            {"role": "user", "content": f"Summarize the following text in {language_code} language:\n\n{transcript}"}
+            {"role": "user", "content": f"Please summarize the following combined summaries in {language_code}:\n\n{combined_summary}"}
         ]
-        response = openai.ChatCompletion.create(
+        final_response = openai.ChatCompletion.create(
             model=model_name,
-            messages=messages,
+            messages=final_messages,
             temperature=0.7
         )
-        return response.choices[0].message['content']
+
+        return final_response.choices[0].message['content']
     except Exception as e:
         raise Exception(f"Error during summarization: {e}")
 
